@@ -1,0 +1,10 @@
+---
+# Arguments
+
+project : test_db
+dma : None
+host : hostID
+user : test_admin
+password : ****
+port : 5432
+schema : test
