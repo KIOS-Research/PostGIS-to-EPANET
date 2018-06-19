@@ -1,23 +1,45 @@
-import os, re, sys, yaml
-import psycopg2, numpy
-import datetime, json
+import os
+import psycopg2
+import re
+import numpy
+import datetime
+import sys
+import json
+import yaml
 
-f = open("wrInpFile.yaml", "r")
+a=numpy.zeros(4)
+i=0
+pathname = os.path.dirname(sys.argv[0])
+fullpath = os.path.abspath(pathname)
+confpath = fullpath + '\\wrInpFile.yaml'  # forwarder/
+f = open(confpath, "r")
 cfg = yaml.load(f)
 
 arg=[]
 for section in cfg:
     arg.append(cfg[section])
 
-username= "%s" % arg[3]
-password= "%s" % arg[4]
-DMA= "%s" % arg[0]
-host= "%s" % arg[2]
-port= "%s" % arg[5]
-schema="%s" % arg[6]
-dma="%s" % arg[1]
+username = cfg['user']
+password = cfg['password']
+DMA = cfg['project']
+host = cfg['host']
+port = str(cfg['port'])
+schema = cfg['schema']
+dmalist = cfg['dmalist']
+dma = cfg['dma']
+junctions_shp = cfg['junctions_shp']
+reservoirs_shp = cfg['reservoirs_shp']
+tanks_shp = cfg['tanks_shp']
+pipes_shp = cfg['pipes_shp']
+pumps_shp = cfg['pumps_shp']
+valves_shp = cfg['valves_shp']
+
+if dma not in dmalist:
+    print 'Wrong DMA.'
+    sys.exit(0)
 
 NN="dbname=" + DMA + " host=" + host + " user=" + username + " password=" + password + " port=" + port
+
 # create connection to ices database
 conn = psycopg2.connect(NN)
 
@@ -27,7 +49,6 @@ now = datetime.datetime.now()
 pp=str(now)
 NETWORK=schema+'dma'+str(dma)+'_'+pp[0:10]+'_'+'AtTime_'+pp[11:13]+'%'+pp[14:16]+'%'+pp[17:19]+'.inp'
 
-# initialize
 tanksCh=1
 reservoirsCh=1
 pumpsCh=1
@@ -37,65 +58,65 @@ junctionsCh=1
 # WGS84 coordinates
 # GET ALL LAYERS TABLE FROM DATABASE
 # JUNCTIONS
-cur.execute("select exists(select * from information_schema.tables where table_schema=%s and table_name=%s)", (schema,'junctions',))
+cur.execute("select exists(select * from information_schema.tables where table_schema=%s and table_name=%s)", (schema,junctions_shp,))
 a1=cur.fetchone()[0]
 
 if a1==True:
-    cur.execute('''SELECT
-      junctions.dc_id,
-      junctions.demand,
-      junctions.pattern,
-      junctions.elevation
-    FROM ''' + schema + '.junctions')
+    cur.execute('SELECT '
+      +junctions_shp+'.dc_id,'
+      +junctions_shp+'.demand,'
+      +junctions_shp+'.pattern,'
+      +junctions_shp+'.elevation'
+    ' FROM ' + schema + '.'+junctions_shp)
 
     JUNCTIONS1 = cur.fetchall()
 else:
     junctionsCh=0
 
-cur.execute("select exists(select * from information_schema.tables where table_schema=%s and table_name=%s)", (schema,'reservoirs',))
+cur.execute("select exists(select * from information_schema.tables where table_schema=%s and table_name=%s)", (schema,reservoirs_shp,))
 a1=cur.fetchone()[0]
 if a1==True:
     # RESERVOIRS
-    cur.execute('''SELECT
-      reservoirs.dc_id,
-      reservoirs.head,
-      reservoirs.dma
-    FROM ''' + schema + '.reservoirs')
+    cur.execute('SELECT '
+      +reservoirs_shp +'.dc_id,'
+      +reservoirs_shp + '.head,'
+      +reservoirs_shp + '.dma'
+    ' FROM ' + schema + '.'+reservoirs_shp)
 
     RESERVOIRS1 = cur.fetchall()
 else:
     reservoirsCh=0
 
-cur.execute("select exists(select * from information_schema.tables where table_schema=%s and table_name=%s)", (schema,'tanks',))
+cur.execute("select exists(select * from information_schema.tables where table_schema=%s and table_name=%s)", (schema,tanks_shp,))
 a1=cur.fetchone()[0]
 if a1==True:
     # TANKS
-    cur.execute('''SELECT
-      tanks.dc_id,
-      tanks.elevation,
-      tanks.initiallev,
-      tanks.minimumlev,
-      tanks.maximumlev,
-      tanks.diameter,
-      tanks.minimumvol,
-      tanks.volumecurv,
-      tanks.dma
-      FROM ''' + schema + '.tanks')
+    cur.execute('SELECT '
+      +tanks_shp+'.dc_id,'
+      + tanks_shp + '.elevation,'
+      + tanks_shp + '.initiallev,'
+      + tanks_shp + '.minimumlev,'
+      + tanks_shp + '.maximumlev,'
+      + tanks_shp + '.diameter,'
+      + tanks_shp + '.minimumvol,'
+      + tanks_shp + '.volumecurv,'
+      + tanks_shp + '.dma'
+      ' FROM ' + schema + '.'+tanks_shp)
 
     TANKS1 = cur.fetchall()
 else:
     tanksCh=0
 
 # PIPES
-cur.execute('''SELECT
-  pipes.length,
-  pipes.diameter,
-  pipes.roughness,
-  pipes.minorloss,
-  pipes.status,
-  pipes.dma,
-  pipes.dc_id
-  FROM ''' + schema + '.pipes')
+cur.execute('SELECT '
+  +pipes_shp+'.length,'
+    + pipes_shp + '.diameter,'
+    + pipes_shp + '.roughness,'
+    + pipes_shp + '.minorloss,'
+    + pipes_shp + '.status,'
+    + pipes_shp + '.dma,'
+    + pipes_shp + '.dc_id'
+  ' FROM ' + schema + '.'+pipes_shp)
 
 PIPES1 = cur.fetchall()
 
@@ -103,15 +124,15 @@ cur.execute("select exists(select * from information_schema.tables where table_s
 a1=cur.fetchone()[0]
 if a1==True:
     # PUMPS
-    cur.execute('''SELECT
-      pumps.dc_id,
-      pumps.pipeTo,
-      pumps.From,
-      pumps.head,
-      pumps.flow,
-      pumps.curve,
-      pumps.dma
-      FROM ''' + schema + '.pumps')
+    cur.execute('SELECT '
+      +pumps_shp+'.dc_id,'
+        + pumps_shp + '.pipeTo,'
+        + pumps_shp + '.From,'
+        + pumps_shp + '.head,'
+        + pumps_shp + '.flow,'
+        + pumps_shp + '.curve,'
+        + pumps_shp + '.dma'
+      ' FROM ' + schema + '.'+pumps_shp)
 
     PUMPS1 = cur.fetchall()
 else:
@@ -121,24 +142,23 @@ cur.execute("select exists(select * from information_schema.tables where table_s
 a1=cur.fetchone()[0]
 if a1==True:
     # VALVES
-    cur.execute('''SELECT
-      valves.dc_id,
-      valves.pipeTo,
-      valves.pipeFrom,
-      valves.diameter,
-      valves.type,
-      valves.setting,
-      valves.minorloss,
-      valves.dma
-      FROM ''' + schema + '.valves')
+    cur.execute('SELECT '
+      + valves_shp+'.dc_id,'
+        + valves_shp + '.pipeTo,'
+        + valves_shp + '.pipeFrom,'
+        + valves_shp + '.diameter,'
+        + valves_shp + '.type,'
+        + valves_shp + '.setting,'
+        + valves_shp + '.minorloss,'
+        + valves_shp + '.dma'
+      ' FROM ' + schema + '.'+valves_shp)
 
     VALVES1 = cur.fetchall()
 else:
     valvesCh=0
 
 # Vertices
-cur.execute('''SELECT ST_AsGeoJSON(geom) FROM ''' + schema + '''.pipes''')
-
+cur.execute('''SELECT ST_AsGeoJSON(geom) FROM ''' + schema + '.'+pipes_shp)
 vertices = cur.fetchall()
 dd=numpy.zeros(len(vertices))
 for i in range(0, len(vertices)):
@@ -149,7 +169,6 @@ for i in range(0, len(vertices)):
        dd[i]=round(len(mm))
 
 lenVert=int(round(sum(dd)))
-
 lonPipe=numpy.zeros(lenVert)
 latPipe=numpy.zeros(lenVert)
 Nodes=[]
@@ -193,7 +212,7 @@ for i in range(0, len(vertices)):
         NodeIndexID.append(i)
         NodeIndexID.append(i+1)
 
-i=0;b=[] # to b contain coordinates start and point of pipes. start,end,start,end,st...
+i=0;b=[] # to b periexei mesa oles tis sintetagmenes start and point of pipes. start,end,start,end,st...
 while i<len(lonlatPipePoints):
     b.append((lonlatPipePoints[i]))
     i=i+1
@@ -216,23 +235,31 @@ indexPipesFrom=[]
 for i in range(0,len(PIPES1)):
     idPipes.append(str(i+1))
 
-for u in range(0,len(PUMPS1)):
-    i=0
-    for s in idPipes:
-        if s==PUMPS1[u][1]:
-            indexPipesTo.append(i)
-        if s==PUMPS1[u][2]:
-            indexPipesFrom.append(i)
-        i+=1
+if pumpsCh:
+    for u in range(0,len(PUMPS1)):
+        i=0
+        for s in idPipes:
+            if s==PUMPS1[u][1]:
+                indexPipesTo.append(i)
+            if s==PUMPS1[u][2]:
+                indexPipesFrom.append(i)
+            i+=1
 
-indexPipe = len(idPipes) + 1
-checkPumps=0
-if len(indexPipesFrom)<len(PUMPS1):
-    checkPumps=len(indexPipesFrom)
-    for i in range(0,len(RESERVOIRS1)):
-        indexPipesFrom.append(indexPipe+i)
-        NodeIndexID.append(str(RESERVOIRS1[i][0]))
-        NodeNewIndices.append(indexPipe+i)
+    indexPipe = len(idPipes) + 1
+    checkPumps=0
+    if len(indexPipesFrom)<len(PUMPS1):
+        checkPumps=len(indexPipesFrom)
+        for i in range(0,len(RESERVOIRS1)):
+            indexPipesFrom.append(indexPipe+i)
+            NodeIndexID.append(str(RESERVOIRS1[i][0]))
+            NodeNewIndices.append(indexPipe+i)
+
+#elevation=numpy.zeros(len(newJunctions))
+#for i in range(0, len(newJunctions)):
+#elevation = proj4.proj4(newJunctions)#int(newJunctions[i][0]),int(newJunctions[i][1]))
+#print i
+# Coordinates
+#cur.execute('''SELECT ST_AsGeoJSON(geom) FROM ''' + schema + '''.junctions''')
 
 if junctionsCh==1 and dma=="None":
     coordinates = cur.fetchall()
@@ -246,7 +273,7 @@ if junctionsCh==1 and dma=="None":
         lon[i]=pointCoords[i][1]
 
 if reservoirsCh==1:
-    cur.execute('''SELECT ST_AsGeoJSON(geom) FROM ''' + schema + '''.reservoirs''')
+    cur.execute('''SELECT ST_AsGeoJSON(geom) FROM ''' + schema + '.'+reservoirs_shp)
     coordinatesReservoirs = cur.fetchall()
     lonReservoir=numpy.zeros(len(coordinatesReservoirs))
     latReservoir=numpy.zeros(len(coordinatesReservoirs))
@@ -260,7 +287,7 @@ if reservoirsCh==1:
 
 if tanksCh==1:
     lonlatTanks=[]; allTankIndices=[]; tanksID=[]; indexTanksNodes=[]; cc=[]; q=0
-    cur.execute('''SELECT ST_AsGeoJSON(geom) FROM ''' + schema + '''.tanks''')
+    cur.execute('''SELECT ST_AsGeoJSON(geom) FROM ''' + schema + '.'+tanks_shp)
     coordinatesTanks = cur.fetchall()
     lonTank=numpy.zeros(len(coordinatesTanks))
     latTank=numpy.zeros(len(coordinatesTanks))
@@ -275,8 +302,16 @@ if tanksCh==1:
            allTankIndices.append([u for u, ltr in enumerate(pointCoords) if ltr == str(["{0:.8f}".format((mm[0])), "{0:.8f}".format((mm[1]))])])
            tanksID.append(TANKS1[i][0])
            #if not allTankIndices[q]:
-           cc.append(NodeIndexID[index[allTankIndices[q]]]); q+=1
+           cc.append(NodeIndexID[index[allTankIndices[q]][0]]); q+=1
 
+# if dma!="None":
+#     if not indexTanksNodes:
+#         cc=-1
+#     else:
+#         cc=NodeIndexID[indexTanksNodes]
+# else:
+#     cc=-1
+#########################################
 # Write EPANET INP file
 TITLE = 'Save EPANET INP file'
 
@@ -366,6 +401,19 @@ for i in range(0,len(PIPES1)):
     if dma in re.sub(r'\s', '', str(PIPES1[i][5])).split(',') or dma=="None":
        pipesInfo=PIPES1[i]
        id1=str(i+1)
+       # if pipesInfo[6]!=None:
+       #    nodes = re.findall(r'\w+', pipesInfo[6])
+       #    if len(nodes)>2:
+       #       node1=nodes[1]
+       #       node2=nodes[3]
+       #    else:
+       #       if nodes[0]=='FROM':
+       #          node2=NodeIndexID[i*2+1]
+       #          node1=nodes[1]
+       #       else:
+       #          node1=NodeIndexID[i*2]
+       #          node2=nodes[1]
+       # else:
        node1=NodeIndexID[i*2]
        node2=NodeIndexID[i*2+1]
 
@@ -403,6 +451,10 @@ if pumpsCh==1:
             except:
                 node2pump=pumpsInfo[2]
             line1= "%s       %s             %s             %s %s\n" % (id1, node2pump, node1pump, parameters,curvID)
+            # else:
+            #     node1pump=pumpsInfo[2]
+            #     node2pump=NodeIndexID[int(pumpsInfo[1])*2]#pumpsInfo[1]
+            #     line1= "%s       %s             %s             %s %s\n" % (id1, node1pump, node2pump, parameters,curvID)
             file.write(line1)
 
 file.write("\n[VALVES]\n")
@@ -434,6 +486,18 @@ file.write('''\n[TAGS]
 
 file.write('''\n[PATTERNS]
 ;ID		Multipliers	''')
+# pat = ["" for x in range(len(JUNCTIONS1))]
+# mult=numpy.zeros(6)
+# for i in range(0,len(pat)):
+#     junctionsInfo=JUNCTIONS1[i]
+#     ppp=junctionsInfo[2]
+#     if ppp!=None:
+#         pat[i]=junctionsInfo[2]
+# ##        mult=numpy.random.rand(1,6);
+#         for u in range(0,6):
+# ##            line1= "%s       %.10f\n" % (pat[i],mult[0][u])
+#             line1= "%s       %.10f\n" % (pat[i],1)
+#             file.write(line1)
 
 file.write('''\n[CURVES]
 
@@ -445,7 +509,6 @@ if pumpsCh==1:
         curvX=curvesInfo[3]
         curvY=curvesInfo[4]
         if curvX!=None:
-            #curvX.split()
             mmX=re.findall(r'\d+..\d+', curvX)
             mmY=re.findall(r'\d+..\d+', curvY)
             bb=len(mmX)
@@ -576,3 +639,4 @@ for i in range(0,len(vertices)):
 file.write("\n[END]\n")
 file.close()
 os.startfile(NETWORK)
+
