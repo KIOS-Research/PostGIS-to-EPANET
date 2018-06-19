@@ -4,7 +4,7 @@ PostGIS to EPANET
 Export to EPANET INP files with python and postgres database.
 Run PostGIStoEPANET.exe
 
-wnInpFile.yalm 
+wrInpFile.yalm 
 -----------------------
 
 junctions_shp - name of junctions shapefile
