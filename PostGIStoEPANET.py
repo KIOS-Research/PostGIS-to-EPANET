@@ -302,6 +302,7 @@ if reservoirsCh==1:
             lonReservoir[i]=mm[0]
             latReservoir[i]=mm[1]
 
+cc = []
 if tanksCh==1:
     lonlatTanks=[]; allTankIndices=[]; tanksID=[]; indexTanksNodes=[]; cc=[]; q=0
     cur.execute('''SELECT ST_AsGeoJSON(geom) FROM ''' + schema + '.'+tanks_shp)
@@ -656,4 +657,3 @@ for i in range(0,len(vertices)):
 file.write("\n[END]\n")
 file.close()
 os.startfile(NETWORK)
-
